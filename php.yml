@@ -1,0 +1,70 @@
+version: "3.7"
+configs:
+  ngx22:
+    file: ./nginx/default.conf
+  haproxy-cfg33:
+    file: ./haproxy/haproxy.cfg
+services:
+  db:
+    image: mysql:5.6
+    environment:
+      - MYSQL_ROOT_PASSWORD=welcome@123
+      - MYSQL_DATABASE=srinidhi
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=welcome@123
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == node1
+    networks:
+      - mynet
+  web:
+    image: apache-php-mysql:1
+    ports:
+      - 7000:80        
+    deploy:
+      mode: replicated
+      replicas: 3
+      placement:
+        constraints:
+          - node.role == manager   
+    depends_on:
+      - db
+    networks:
+      - mynet
+        #  nginx:
+        #    image: nginx
+        #    deploy:
+        #      mode: replicated
+        #      replicas: 1
+        #      placement:
+        #        constraints:
+        #          - node.hostname == node1
+        #    ports:
+        #      - 8080:80
+        #    configs:
+        #      - source: ngx22
+        #        target: /etc/nginx/conf.d/default.conf
+        #    networks:
+        #      - mynet
+  haproxy:
+    image: haproxy
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == node1
+    ports:
+      - 80:80 # Roundrobin
+      - 9000:9000 # #Haproxy Stats
+    networks:
+      - mynet
+    configs:
+      - source: haproxy-cfg33
+        target: /usr/local/etc/haproxy/haproxy.cfg    
+networks:
+  mynet:
+    driver: overlay        
